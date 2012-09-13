@@ -1,0 +1,20 @@
+#!/bin/sh
+
+SESSION='%(session_name)s'
+
+if [ -z "$1" ]
+then
+    WORKINGDIR="%(start_dir)s"
+else
+    WORKINGDIR=$1
+fi
+
+# if the session is already running, just attach to it.
+tmux has-session -t $SESSION
+if [ $? -eq 0 ]; then
+    echo "Session $SESSION already exists. Attaching."
+    tmux -2 attach -t $SESSION
+    exit 0;
+fi
+
+tmux start-server

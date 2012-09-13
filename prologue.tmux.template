@@ -1,0 +1,3 @@
+tmux select-window -t $SESSION:%(start_window)d
+tmux -2 attach-session -d -t $SESSION
+
