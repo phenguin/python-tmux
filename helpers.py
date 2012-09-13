@@ -36,6 +36,7 @@ class ConfigProcessor(object):
             sys.exit(1)
 
         self.windows = list(enumerate(self.config.get("windows", [])))
+        self.template_root_dir = self.config.get("root_dir")
 
     def tmux_cmd_with_config(self, args, check = True):
         return tmux_cmd(args % self.config, check = check)
@@ -55,31 +56,41 @@ class ConfigProcessor(object):
     def process_window(self, index, window_dict):
         window_dict['session'] = self.session_name
         window_dict['index'] = index
+        window_root_dir = window_dict.get('root_dir') or self.template_root_dir
 
         def tmux_cmd_targeting_window(cmd, arg_str = None, pane = None):
             cmd_str = cmd
-            print "cmd_str: ", cmd_str
             cmd_str += " -t %(session)s:%(index)d" % window_dict
-            print "cmd_str: ", cmd_str
             cmd_str += ".%d " % (pane, ) if pane is not None else " "
-            print "cmd_str: ", cmd_str
 
             if arg_str is not None:
-                print "arg_str: ", arg_str
                 cmd_str += arg_str % window_dict
-                print "cmd_str: ", cmd_str
 
             return tmux_cmd(cmd_str)
 
-        tmux_cmd_targeting_window("new-window", "-n %(name)s")
+        # Because we always start with one window
+        if index == 0:
+            tmux_cmd_targeting_window("rename-window", window_dict['name'])
+        else:
+            tmux_cmd("new-window -t %(session)s:%(index)d -n %(name)s" % window_dict)
 
         panes = window_dict.get("panes")
+
+        if panes is None:
+            try:
+                panes = [ { "commands" : [window_dict['command']] } ]
+            except KeyError:
+                panes = []
+
         if panes is not None:
             for i, x in enumerate(panes):
                 if i == 0: continue
                 tmux_cmd_targeting_window("split-window")
 
             for n, pane_conf in enumerate(panes):
+                if window_root_dir is not None:
+                    tmux_cmd_targeting_window("send-keys", "\"cd %s\" C-m" % (window_root_dir,), pane = n)
+
                 for cmd in pane_conf.get("commands", []):
                     tmux_cmd_targeting_window("send-keys", "\"%s\" C-m" % (cmd,), pane = n)
 
@@ -91,7 +102,7 @@ class ConfigProcessor(object):
 
     def execute_window_processing(self):
         for i, window_dict in self.windows:
-            self.process_window(i+1, window_dict)
+            self.process_window(i, window_dict)
 
         return True
 
