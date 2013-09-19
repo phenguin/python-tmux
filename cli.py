@@ -12,7 +12,7 @@ def templates_glob(config_dir_location):
     return os.path.join(get_templates_dir(config_dir_location), "*" + template_ext)
 
 def get_templates_dir(config_dir_location):
-    return os.path.join(config_dir, 'templates')
+    return os.path.join(config_dir_location, 'templates')
 
 def get_template_names(config_dir_location):
     templates_dir = get_templates_dir(config_dir_location)
@@ -20,11 +20,12 @@ def get_template_names(config_dir_location):
     return map(map_func, glob(templates_glob(config_dir_location)))
 
 def get_template_full_path(config_dir_location, template_name):
-    templates_dir = get_templates_dir(config_dir_location)
-    return os.path.join(templates_dir, template_name + template_ext)
+    return os.path.join(config_dir_location, template_name + template_ext)
 
 def run_template(config_dir, template_name):
     path = get_template_full_path(config_dir, template_name)
+    print path
+    print path
     return ConfigProcessor(path).run()
 
 def remove_template(config_dir, template_name):
@@ -55,21 +56,42 @@ def run(options):
     templates_dir = get_templates_dir(options.configdir)
 
     if options.command == 'edit':
-        edit_template(options.configdir, options.template)
+
+        if options.template == 'project':
+            print "hey"
+            configdir = os.getcwd()
+            template = ".pymux_env"
+        else:
+            configdir = get_templates_dir(options.configdir)
+            template = options.template
+
+        edit_template(configdir, template)
     elif options.command == 'remove':
-        remove_template(options.configdir, options.template)
+        config_dir = get_templates_dir(options.configdir)
+        remove_template(config_dir, options.template)
     elif options.command == 'run':
-        run_template(options.configdir, options.template)
+
+        if options.template == 'project':
+            configdir = os.getcwd()
+            print "hey: ", configdir
+            template = ".pymux_env"
+        else:
+            configdir = get_templates_dir(options.configdir)
+            template = options.template
+
+        run_template(configdir, template)
     elif options.command == 'show':
         for name in get_template_names(options.configdir):
             if name != default_template_name:
                 print name
+    elif options.command == 'debug':
+        print os.system("pwd");
     else:
         print "Unknown command: %s" % options.command
 
 def main():
     parser = argparse.ArgumentParser(description='Run tmux sessions defined by json configuration files')
-    parser.add_argument("command", choices = ["run", "edit", "show", "remove"])
+    parser.add_argument("command", choices = ["run", "edit", "show", "remove", "debug"])
     parser.add_argument("template",
             default="",
             type=str,

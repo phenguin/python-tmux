@@ -1,0 +1,3 @@
+#!/bin/sh
+
+pymux run project
